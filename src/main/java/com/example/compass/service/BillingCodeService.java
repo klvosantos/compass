@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class BillingCodeService {
@@ -21,8 +22,8 @@ public class BillingCodeService {
         return billingCodeRepository.findAll();
     }
 
-    public BillingCode getBillingCodeById(Long id) {
-        return billingCodeRepository.findById(id).orElse(null);
+    public Optional<BillingCode> getBillingCodeById(Long id) {
+        return billingCodeRepository.findById(id);
     }
 
     public BillingCode saveBillingCode(BillingCode billingCode) {
@@ -31,5 +32,15 @@ public class BillingCodeService {
 
     public void deleteBillingCode(Long id) {
         billingCodeRepository.deleteById(id);
+    }
+
+    public String validatePaymentAmount(double originalAmount, double paymentAmount) {
+        if (paymentAmount < originalAmount) {
+            return "Partial payment";
+        } else if (paymentAmount == originalAmount) {
+            return "Full payment";
+        } else {
+            return "Overpayment";
+        }
     }
 }

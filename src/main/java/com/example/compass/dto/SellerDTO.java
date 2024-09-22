@@ -5,9 +5,6 @@ import java.io.Serializable;
 public class SellerDTO implements Serializable {
 
     private Long id;
-    // other fields
-
-    // getters and setters
 
     public Long getId() {
         return id;
@@ -16,6 +13,5 @@ public class SellerDTO implements Serializable {
     public void setId(Long id) {
         this.id = id;
     }
-
 
 }

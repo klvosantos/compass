@@ -1,13 +1,13 @@
 package com.example.compass.dto;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 
 public class BillingCodeDTO implements Serializable {
 
     private Long id;
-    // other fields
 
-    // getters and setters
+    private BigDecimal amount;
 
     public Long getId() {
         return id;
@@ -17,5 +17,12 @@ public class BillingCodeDTO implements Serializable {
         this.id = id;
     }
 
-    // other getters and setters
+    public BigDecimal getAmount() {
+        return amount;
+    }
+
+    public void setAmount(BigDecimal amount) {
+        this.amount = amount;
+
+    }
 }

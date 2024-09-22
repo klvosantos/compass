@@ -5,6 +5,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 
+import java.math.BigDecimal;
+
 @Entity
 public class Payment {
 
@@ -12,8 +14,9 @@ public class Payment {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
 
-    // other fields, getters and setters
+    private BigDecimal amount;
 
+    private Long billingCodeId;
 
     public Long getId() {
         return id;
@@ -21,5 +24,21 @@ public class Payment {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public BigDecimal getAmount() {
+        return amount;
+    }
+
+    public void setAmount(BigDecimal amount) {
+        this.amount = amount;
+    }
+
+    public Long getBillingCodeId() {
+        return billingCodeId;
+    }
+
+    public void setBillingCodeId(Long billingCodeId) {
+        this.billingCodeId = billingCodeId;
     }
 }

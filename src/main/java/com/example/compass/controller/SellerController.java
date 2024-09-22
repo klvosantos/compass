@@ -1,8 +1,10 @@
 package com.example.compass.controller;
 
 import com.example.compass.entity.Seller;
+import com.example.compass.response.ErrorResponse;
 import com.example.compass.service.SellerService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,12 +32,12 @@ public class SellerController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Seller> getSellerById(@PathVariable Long id) {
+    public ResponseEntity<?> getSellerById(@PathVariable Long id) {
         Seller seller = sellerService.getSellerById(id);
         if (seller != null) {
-            return ResponseEntity.ok(seller);
+            return new ResponseEntity<>(seller, HttpStatus.OK);
         } else {
-            return ResponseEntity.notFound().build();
+            return new ResponseEntity<>(new ErrorResponse("Seller not found"), HttpStatus.NOT_FOUND);
         }
     }
 
