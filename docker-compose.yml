@@ -8,5 +8,25 @@ services:
       - "4510-4559:4510-4559"  # SQS, S3, etc.
     environment:
       - SERVICES=sqs
+      - AWS_ACCESS_KEY_ID=test  # Set AWS Access Key
+      - AWS_SECRET_ACCESS_KEY=test  # Set AWS Secret Key
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - compass_network
+
+  compass_application:  # Your actual service name
+    build:
+      context: .
+      dockerfile: Dockerfile  # Ensure this is the correct path
+    environment:
+      - AWS_ACCESS_KEY_ID=test  # Set AWS Access Key
+      - AWS_SECRET_ACCESS_KEY=test  # Set AWS Secret Key
+    depends_on:
+      - localstack
+    networks:
+      - compass_network  # Use the same network as LocalStack
+
+networks:
+  compass_network:
+    driver: bridge

@@ -15,6 +15,7 @@ import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 public class BatchPaymentController {
@@ -22,23 +23,32 @@ public class BatchPaymentController {
     private final SellerService sellerService;
     private final BillingCodeService billingCodeService;
     private final SqsClient sqsClient;
+
     @Autowired
     public BatchPaymentController(SellerService sellerService, BillingCodeService billingCodeService, SqsClient sqsClient) {
         this.sellerService = sellerService;
         this.billingCodeService = billingCodeService;
         this.sqsClient = sqsClient;
     }
+
     @PostMapping("/batch-payment")
     public ResponseEntity<?> processBatchPayment(@RequestBody BatchPaymentDTO batchPayment) {
         // Extract the seller code and payment information from the BatchPaymentDTO
         Long sellerId = batchPayment.getSellerId();
         List<PaymentDTO> payments = batchPayment.getPayments();
 
-        // Use the SellerService to process the seller code
-        sellerService.getSellerById(sellerId);
+        // Validate seller existence
+        if (sellerService.getSellerById(sellerId) == null) {
+            return ResponseEntity.status(404).body(Map.of("error", "Seller not found"));
+        }
 
         // Use the BillingCodeService to process the payment information
         for (PaymentDTO payment : payments) {
+
+            if (payment.getAmount() == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Missing payment amount"));
+            }
+
             billingCodeService.validatePaymentAmount(payment.getOriginalAmount(), payment.getAmount().doubleValue());
 
             BigDecimal originalAmount = BigDecimal.valueOf(payment.getOriginalAmount());
@@ -52,7 +62,6 @@ public class BatchPaymentController {
                 queueUrl = "partialPaymentQueue";
                 payment.setStatus("PARTIAL");
 
-                System.out.print("Partial payment"); // apagar
             } else if (paidAmount.compareTo(originalAmount) == 0) {
                 // The payment is total
 
@@ -60,7 +69,6 @@ public class BatchPaymentController {
                 queueUrl = "totalPaymentQueue";
                 payment.setStatus("FULL");
 
-                System.out.print("Total payment"); // apagar
             } else {
                 // The payment is excess
 
@@ -68,7 +76,6 @@ public class BatchPaymentController {
                 queueUrl = "excessPaymentQueue";
                 payment.setStatus("OVERPAID");
 
-                System.out.print("Excess payment"); // apagar
             }
 
             String fullQueueUrl = sqsClient.getQueueUrl(builder -> builder.queueName(queueUrl)).queueUrl();
