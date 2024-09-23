@@ -19,7 +19,6 @@ public class PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final SellerRepository sellerRepository;
-
     private final BillingCodeRepository billingCodeRepository;
 
     @Autowired
@@ -37,17 +36,19 @@ public class PaymentService {
         return paymentRepository.findById(id).orElse(null);
     }
 
-    public Payment savePayment(Payment payment) {
-        return paymentRepository.save(payment);
+    public Payment savePayment(PaymentDTO paymentDTO) {
+        Payment payment = new Payment();
+        payment.setId(paymentDTO.getId());
+        payment.setAmount(paymentDTO.getAmount());
+        payment.setBillingCodeId(paymentDTO.getBillingCodeId());
+        payment.setStatus(com.example.compass.entity.Payment.PaymentStatus.valueOf(paymentDTO.getStatus()));
+
+        return paymentRepository.save(payment); // Return the saved Payment object
     }
 
     public void deletePayment(Long id) {
         paymentRepository.deleteById(id);
     }
-
-    //****
-
-    // In PaymentService.java
 
     public void processBatchPayments(BatchPaymentDTO batchPaymentDTO) throws Exception {
         Seller seller = sellerRepository.findById(batchPaymentDTO.getSellerId())
@@ -59,8 +60,11 @@ public class PaymentService {
 
             validatePaymentAmount(paymentDTO.getAmount(), billingCode.getAmount());
 
+            // Create Payment entity and set properties
             Payment payment = new Payment();
-            // set payment properties here
+            payment.setAmount(paymentDTO.getAmount());
+            payment.setBillingCodeId(paymentDTO.getBillingCodeId());
+            payment.setStatus(Payment.PaymentStatus.NOT_PROCESSED);
 
             paymentRepository.save(payment);
         }

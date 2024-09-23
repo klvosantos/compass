@@ -13,6 +13,8 @@ public class PaymentDTO implements Serializable {
 
     private double originalAmount;
 
+    private String status = "NOT_PROCESSED";
+
     public Long getId() {
         return id;
     }
@@ -39,5 +41,13 @@ public class PaymentDTO implements Serializable {
 
     public double getOriginalAmount() {
         return originalAmount;
+    }
+
+    public String getStatus() { // New getter
+        return status;
+    }
+
+    public void setStatus(String status) { // New setter
+        this.status = status;
     }
 }

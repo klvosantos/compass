@@ -1,9 +1,6 @@
 package com.example.compass.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 
 import java.math.BigDecimal;
 
@@ -17,6 +14,8 @@ public class Payment {
     private BigDecimal amount;
 
     private Long billingCodeId;
+    @Enumerated(EnumType.STRING)
+    private PaymentStatus status = PaymentStatus.NOT_PROCESSED;;
 
     public Long getId() {
         return id;
@@ -40,5 +39,21 @@ public class Payment {
 
     public void setBillingCodeId(Long billingCodeId) {
         this.billingCodeId = billingCodeId;
+    }
+
+    public PaymentStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(PaymentStatus status) {
+        this.status = status;
+    }
+
+    // Enum for payment status
+    public enum PaymentStatus {
+        NOT_PROCESSED,
+        PARTIAL,
+        FULL,
+        OVERPAID
     }
 }

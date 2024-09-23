@@ -1,6 +1,7 @@
 package com.example.compass.controller;
 
 import com.example.compass.dto.BatchPaymentDTO;
+import com.example.compass.dto.PaymentDTO;
 import com.example.compass.entity.Payment;
 import com.example.compass.service.PaymentService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,8 +33,9 @@ public class PaymentController {
     }
 
     @PostMapping
-    public Payment savePayment(@RequestBody Payment payment) {
-        return paymentService.savePayment(payment);
+    public ResponseEntity<Payment> savePayment(@RequestBody PaymentDTO paymentDTO) {
+        Payment savedPayment = paymentService.savePayment(paymentDTO);
+        return new ResponseEntity<>(savedPayment, HttpStatus.CREATED);
     }
 
     @DeleteMapping("/{id}")
