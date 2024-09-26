@@ -4,14 +4,14 @@ services:
   localstack:
     image: localstack/localstack
     ports:
-      - "4566:4566"  # LocalStack Gateway
-      - "4510-4559:4510-4559"  # SQS, S3, etc.
+      - "4566:4566"
     environment:
-      - SERVICES=sqs
+      - SERVICES=sqs, sns
       - AWS_ACCESS_KEY_ID=test  # Set AWS Access Key
       - AWS_SECRET_ACCESS_KEY=test  # Set AWS Secret Key
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./scripts/init-aws.sh:/etc/localstack/init/ready.d/init-aws.sh
     networks:
       - compass_network
 
@@ -26,7 +26,6 @@ services:
       - localstack
     networks:
       - compass_network  # Use the same network as LocalStack
-
 networks:
   compass_network:
     driver: bridge

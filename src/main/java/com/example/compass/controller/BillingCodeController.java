@@ -16,7 +16,6 @@ import java.util.Optional;
 public class BillingCodeController {
 
     private final BillingCodeService billingCodeService;
-
     @Autowired
     public BillingCodeController(BillingCodeService billingCodeService) {
         this.billingCodeService = billingCodeService;

@@ -1,85 +1,98 @@
 package com.example.compass.listener;
 
-import com.example.compass.dto.PaymentDTO;
-import com.example.compass.service.PaymentService;
+import com.example.compass.dto.BatchPaymentMessage;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.awspring.cloud.sqs.annotation.SqsListener;
+import io.awspring.cloud.sqs.operations.SqsTemplate;
+import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 import software.amazon.awssdk.services.sqs.SqsClient;
-import software.amazon.awssdk.services.sqs.model.DeleteMessageRequest;
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
 import software.amazon.awssdk.services.sqs.model.Message;
 
 import java.util.List;
 
-@Service
+@Slf4j
+@Component
 public class SqsMessageListener {
-    private final SqsClient sqsClient;
-    private final PaymentService paymentService;
-    private final ObjectMapper objectMapper;
-    private final String partialQueueUrl = "partialPaymentQueue";
-    private final String totalQueueUrl = "totalPaymentQueue";
-    private final String excessQueueUrl = "excessPaymentQueue";
+
+    private static final Logger log = LoggerFactory.getLogger(SqsMessageListener.class);
+
+    @Value("${sqsQueuePartial}")
+    private String sqsQueuePartial;
+
+    @Value("${sqsQueueFull}")
+    private String sqsQueueFull;
+
+    @Value("${sqsQueueExcess}")
+    private String sqsQueueExcess;
 
     @Autowired
-    public SqsMessageListener(SqsClient sqsClient, PaymentService paymentService) {
-        this.sqsClient = sqsClient;
-        this.paymentService = paymentService;
-        this.objectMapper = new ObjectMapper();
+    private SqsTemplate sqsTemplate;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @PostConstruct
+    public void init() {
+        log.info("Listeners initialized for Partial: {}, Full: {}, Excess: {}", sqsQueuePartial, sqsQueueFull, sqsQueueExcess);
     }
 
-    @Scheduled(fixedRate = 5000) // Poll every 5 seconds
-    public void listenPartialPayments() {
-        listenToQueue(partialQueueUrl);
+    @SqsListener("${sqsQueuePartial}")
+    public void partialQueueListener(String message) {
+        processMessage(message, "Partial");
     }
 
-    @Scheduled(fixedRate = 5000) // Poll every 5 seconds
-    public void listenTotalPayments() {
-        listenToQueue(totalQueueUrl);
+    @SqsListener("${sqsQueueFull}")
+    public void fullQueueListener(String message) {
+        processMessage(message, "Full");
     }
 
-    @Scheduled(fixedRate = 5000) // Poll every 5 seconds
-    public void listenExcessPayments() {
-        listenToQueue(excessQueueUrl);
+    @SqsListener("${sqsQueueExcess}")
+    public void excessQueueListener(String message) {
+        processMessage(message, "Excess");
     }
 
-    private void listenToQueue(String queueUrl) {
+    private void processMessage(String message, String queueType) {
+        try {
+            // Log the received message
+            log.info("Received {} payment message from the queue: {}", queueType, message);
+
+            // Fetch the same message from the queue for verification
+            String containerMessage = fetchMessageFromQueue(queueType);
+            log.info("This {} message was sent to the queue: {}", queueType, containerMessage);
+
+            // Deserialize the message to BatchPaymentMessage object
+            BatchPaymentMessage batchPaymentMessage = objectMapper.readValue(message, BatchPaymentMessage.class);
+
+
+        } catch (Exception ex) {
+            log.error("Error processing {} payment message: {}", queueType, ex.getMessage());
+        }
+    }
+
+    @Autowired
+    private SqsClient sqsClient;
+
+    private String fetchMessageFromQueue(String queueUrl) {
         ReceiveMessageRequest receiveRequest = ReceiveMessageRequest.builder()
                 .queueUrl(queueUrl)
-                .maxNumberOfMessages(10) // Number of messages to retrieve
-                .waitTimeSeconds(20) // Long polling
+                .maxNumberOfMessages(1)
+                .waitTimeSeconds(5) // Optional: Long polling
                 .build();
 
+        // Fetch messages from the queue
         List<Message> messages = sqsClient.receiveMessage(receiveRequest).messages();
 
-        for (Message message : messages) {
-            processMessage(message, queueUrl);
-            // Optionally delete the message after processing
-        }
-    }
-
-    private void processMessage(Message message, String queueUrl) {
-        PaymentDTO paymentDTO = parseMessageToPaymentDTO(message);
-
-        // Log the message processing
-        System.out.println("Processing message: " + message.body());
-
-        // Save or update the payment in the database
-        paymentService.savePayment(paymentDTO);
-
-        // After processing, delete the message from the queue
-        sqsClient.deleteMessage(DeleteMessageRequest.builder()
-                .queueUrl(queueUrl)
-                .receiptHandle(message.receiptHandle())
-                .build());
-    }
-
-    private PaymentDTO parseMessageToPaymentDTO(Message message) {
-        try {
-            return objectMapper.readValue(message.body(), PaymentDTO.class);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to parse message to PaymentDTO", e);
-        }
+        // Check if there are any messages and return the body of the first one
+        return messages.stream()
+                .findFirst()
+                .map(Message::body) // Use Message::body to get the body of the message
+                .orElse(null);
     }
 }

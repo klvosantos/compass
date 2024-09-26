@@ -3,7 +3,9 @@ package com.example.compass.service;
 import com.example.compass.entity.BillingCode;
 import com.example.compass.repository.BillingCodeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Optional;
@@ -23,7 +25,8 @@ public class BillingCodeService {
     }
 
     public Optional<BillingCode> getBillingCodeById(Long id) {
-        return billingCodeRepository.findById(id);
+        return Optional.ofNullable(billingCodeRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Billing code not found")));
     }
 
     public BillingCode saveBillingCode(BillingCode billingCode) {
