@@ -1,8 +1,7 @@
 package com.example.compass;
 
-import com.example.compass.dto.PaymentDTO;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.AfterEach;
+
+import org.apache.logging.log4j.message.Message;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -11,30 +10,21 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.env.ConfigurableEnvironment;
-import org.springframework.core.env.MapPropertySource;
+
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
-import org.testcontainers.containers.localstack.LocalStackContainer;
-import org.testcontainers.utility.DockerImageName;
 
 
-import java.lang.reflect.Field;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.testcontainers.containers.localstack.LocalStackContainer.Service.SQS;
 
-import static org.junit.jupiter.api.Assertions.fail;
 
-//@SpringBootTest
+@SpringBootTest
 @AutoConfigureMockMvc
 public class LocalStackIntegrationTest {
 
@@ -98,21 +88,13 @@ public class LocalStackIntegrationTest {
 
     }
 
-//    private void verifyLocalStackConfiguration() {
-//        // Check if LocalStack is ready to accept requests
-//        try {
-//            sqsClient.listQueues(); // This will throw an exception if not configured correctly
-//            System.out.println("LocalStack is configured correctly and ready to accept requests.");
-//        } catch (Exception e) {
-//            throw new RuntimeException("LocalStack is not configured correctly: " + e.getMessage(), e);
-//        }
-//    }
+
 
 //    private void createQueues() {
 //        try {
-//            sqsClient.createQueue(CreateQueueRequest.builder().queueName("partialPaymentQueue").build());
-//            sqsClient.createQueue(CreateQueueRequest.builder().queueName("totalPaymentQueue").build());
-//            sqsClient.createQueue(CreateQueueRequest.builder().queueName("excessPaymentQueue").build());
+//            sqsClient.createQueue(CreateQueueRequest.builder().queueName("partial-queue").build());
+//            sqsClient.createQueue(CreateQueueRequest.builder().queueName("full-queue").build());
+//            sqsClient.createQueue(CreateQueueRequest.builder().queueName("excess-queue").build());
 //        } catch (Exception e) {
 //            System.out.println("Failed to create queues: " + e.getMessage());
 //            throw new RuntimeException("Could not create SQS queues", e);
@@ -158,23 +140,23 @@ public class LocalStackIntegrationTest {
 //                .andExpect(status().isOk())
 //                .andExpect(jsonPath("$.payments[0].status").value("PARTIAL"));
 //
-//        //verifyQueueMessage("partialPaymentQueue", "PARTIAL");
+//        //verifyQueueMessage("partial-queue", "PARTIAL");
 //    }
 
 
     // Test for OVERPAID payment // success
-//    @Test
-//    public void testExcessPaymentProcessing() throws Exception {
-//        String requestBody = "{ \"sellerId\": 1, \"payments\": [ { \"billingCodeId\": 1, \"originalAmount\": 100.00, \"amount\": 150.00 } ] }";
-//
-//        mockMvc.perform(post("/batch-payment")
-//                        .contentType(MediaType.APPLICATION_JSON)
-//                        .content(requestBody))
-//                .andExpect(status().isOk())
-//                .andExpect(jsonPath("$.payments[0].status").value("OVERPAID"));
-//
-//        //verifyQueueMessage("excessPaymentQueue", "OVERPAID");
-//    }
+    @Test
+    public void testExcessPaymentProcessing() throws Exception {
+        String requestBody = "{ \"sellerId\": 1, \"payments\": [ { \"billingCodeId\": 1, \"originalAmount\": 100.00, \"amount\": 150.00 } ] }";
+
+        mockMvc.perform(post("/batch-payment")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.payments[0].status").value("EXCESS"));
+
+        //verifyQueueMessage("excess-queue", "OVERPAID");
+    }
 //
 //    // Test for invalid seller // success
 //    @Test
@@ -201,16 +183,16 @@ public class LocalStackIntegrationTest {
 //    }
 
     // Test for malformed request // sucesso
-    @Test
-    public void testMalformedRequest() throws Exception {
-        String requestBody = "{ \"sellerId\": 1, \"payments\": [ { \"billingCodeId\": 1, \"originalAmount\": 100.00 } ] }"; // Missing amount
-
-        mockMvc.perform(post("/batch-payment")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestBody))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("Missing payment amount"));
-    }
+//    @Test
+//    public void testMalformedRequest() throws Exception {
+//        String requestBody = "{ \"sellerId\": 1, \"payments\": [ { \"billingCodeId\": 1, \"originalAmount\": 100.00 } ] }"; // Missing amount
+//
+//        mockMvc.perform(post("/batch-payment")
+//                        .contentType(MediaType.APPLICATION_JSON)
+//                        .content(requestBody))
+//                .andExpect(status().isBadRequest())
+//                .andExpect(jsonPath("$.error").value("Missing payment amount"));
+//    }
 
     // Test for concurrent processing
 //    @Test

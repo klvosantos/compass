@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
 import software.amazon.awssdk.services.sqs.model.Message;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.List;
 
@@ -23,14 +24,15 @@ public class SqsMessageListener {
 
     private static final Logger log = LoggerFactory.getLogger(SqsMessageListener.class);
 
-    @Value("${sqsQueuePartial}")
-    private String sqsQueuePartial;
+    // Queue names from application.properties
+    @Value("${sqs.partial.queue}")
+    private String sqsQueuePartialName;
 
-    @Value("${sqsQueueFull}")
-    private String sqsQueueFull;
+    @Value("${sqs.full.queue}")
+    private String sqsQueueFullName;
 
-    @Value("${sqsQueueExcess}")
-    private String sqsQueueExcess;
+    @Value("${sqs.excess.queue}")
+    private String sqsQueueExcessName;
 
     @Autowired
     private SqsTemplate sqsTemplate;
@@ -38,61 +40,82 @@ public class SqsMessageListener {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private SqsClient sqsClient;
+
+
     @PostConstruct
     public void init() {
-        log.info("Listeners initialized for Partial: {}, Full: {}, Excess: {}", sqsQueuePartial, sqsQueueFull, sqsQueueExcess);
+
+        log.info("Listeners initialized for Partial: {}, Full: {}, Excess: {}", sqsQueuePartialName, sqsQueueFullName, sqsQueueExcessName);
     }
 
-    @SqsListener("${sqsQueuePartial}")
+    @SqsListener("${sqs.partial.queue}")
     public void partialQueueListener(String message) {
-        processMessage(message, "Partial");
+        processMessage(message, sqsQueuePartialName, "Partial");
     }
 
-    @SqsListener("${sqsQueueFull}")
+    @SqsListener("${sqs.full.queue}")
     public void fullQueueListener(String message) {
-        processMessage(message, "Full");
+        processMessage(message, sqsQueueFullName, "Full");
     }
 
-    @SqsListener("${sqsQueueExcess}")
+    @SqsListener("${sqs.excess.queue}")
     public void excessQueueListener(String message) {
-        processMessage(message, "Excess");
+        processMessage(message, sqsQueueExcessName, "Excess");
     }
 
-    private void processMessage(String message, String queueType) {
+    private void processMessage(String message, String queueName, String queueType) {
         try {
-            // Log the received message
+            String queueUrl = constructQueueUrl(queueName); // Construct the full queue URL
             log.info("Received {} payment message from the queue: {}", queueType, message);
 
-            // Fetch the same message from the queue for verification
-            String containerMessage = fetchMessageFromQueue(queueType);
-            log.info("This {} message was sent to the queue: {}", queueType, containerMessage);
+            // Fetch the message from the actual queue URL
+            Pair<String, String> containerMessage = fetchMessageFromQueue(queueUrl);
+            String messageId = containerMessage.getLeft();
+            String body = containerMessage.getRight();
 
-            // Deserialize the message to BatchPaymentMessage object
-            BatchPaymentMessage batchPaymentMessage = objectMapper.readValue(message, BatchPaymentMessage.class);
+            if (body != null) {
+                log.info("This {} message was sent to the queue: {}", queueType, body);
+                log.info("Message ID: {}", messageId);
 
+                // Deserialize the message
+                BatchPaymentMessage batchPaymentMessage = objectMapper.readValue(body, BatchPaymentMessage.class);
+            } else {
+                log.warn("No message body received for {} queue", queueType);
+            }
 
         } catch (Exception ex) {
             log.error("Error processing {} payment message: {}", queueType, ex.getMessage());
         }
     }
 
-    @Autowired
-    private SqsClient sqsClient;
+    private String constructQueueUrl(String queueName) {
+        // Construct the full queue URL based on the name
+        return "http://sqs.us-east-1.localhost.localstack.cloud:4566/000000000000/" + queueName;
+    }
 
-    private String fetchMessageFromQueue(String queueUrl) {
+
+    private Pair<String, String> fetchMessageFromQueue(String queueUrl) {
+        log.info("Fetching message from queue URL: {}", queueUrl);
+
         ReceiveMessageRequest receiveRequest = ReceiveMessageRequest.builder()
                 .queueUrl(queueUrl)
                 .maxNumberOfMessages(1)
-                .waitTimeSeconds(5) // Optional: Long polling
+                .waitTimeSeconds(5)
+                .visibilityTimeout(0)
                 .build();
 
-        // Fetch messages from the queue
         List<Message> messages = sqsClient.receiveMessage(receiveRequest).messages();
 
-        // Check if there are any messages and return the body of the first one
-        return messages.stream()
-                .findFirst()
-                .map(Message::body) // Use Message::body to get the body of the message
-                .orElse(null);
+        if (messages.isEmpty()) {
+            log.warn("No messages received from the queue: {}", queueUrl);
+            return Pair.of(null, null);
+        }
+
+        Message message = messages.get(0);
+        String messageId = message.messageId();
+        String messageBody = message.body();
+        return Pair.of(messageId, messageBody); // Return a pair of MessageId and body
     }
 }

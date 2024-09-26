@@ -25,13 +25,13 @@ public class BatchPaymentController {
     private final SellerService sellerService;
     private final BillingCodeService billingCodeService;
 
-    @Value("${sqsQueuePartial}")
+    @Value("${sqs.partial.queue}")
     private String SQSPartial;
 
-    @Value("${sqsQueueFull}")
+    @Value("${sqs.full.queue}")
     private String SQSFull;
 
-    @Value("${sqsQueueExcess}")
+    @Value("${sqs.excess.queue}")
     private String SQSExcess;
 
     @Autowired

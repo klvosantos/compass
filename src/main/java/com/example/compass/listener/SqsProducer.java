@@ -15,13 +15,13 @@ import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 public class SqsProducer {
     private static final Logger log = LoggerFactory.getLogger(SqsProducer.class);
 
-    @Value("${sqsQueuePartial}")
+    @Value("${sqs.partial.queue}")
     private String SQSPartial;
 
-    @Value("${sqsQueueFull}")
+    @Value("${sqs.full.queue}")
     private String SQSFull;
 
-    @Value("${sqsQueueExcess}")
+    @Value("${sqs.excess.queue}")
     private String SQSExcess;
 
     private SqsTemplate sqsTemplate;
